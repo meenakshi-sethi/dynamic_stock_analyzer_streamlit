@@ -10,6 +10,7 @@ import ta  # For technical indicators
 ## PART 1: Functions for Fetching, Processing, and Enhancing Stock Data ##
 
 # Function to fetch stock data
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_stock_data(ticker, period, interval):
     end_date = datetime.now()
     if period == '1wk':  # Adjusting start date for weekly data
@@ -23,6 +24,7 @@ def fetch_stock_data(ticker, period, interval):
     return data
 
 # Search Yahoo Finance for matching company equities.
+@st.cache_data(ttl=3600, show_spinner=False)
 def search_tickers(query):
     quotes = yf.Search(query, max_results=10).quotes
     return [
@@ -35,6 +37,7 @@ def search_tickers(query):
     ]
 
 # Function to fetch financial metrics
+@st.cache_data(ttl=1800, show_spinner=False)
 def fetch_financial_metrics(ticker):
     # Using Yahoo Finance for real-time financial data
     ticker_data = yf.Ticker(ticker)
@@ -132,77 +135,121 @@ interval_mapping = {
     'max': '1wk'
 }
 
-# Display financial metrics
+st.sidebar.caption('Yahoo Finance data refreshes every 5 minutes and may be delayed.')
+if st.sidebar.button('Refresh data now'):
+    st.cache_data.clear()
+
 st.header('Key Financial Metrics')
-with st.spinner('Fetching data...'):
-    if ticker:
+if ticker:
+    try:
         revenue, market_cap, pe_ratio = fetch_financial_metrics(ticker)
-        col1, col2, col3 = st.columns(3)
-        col1.metric(label="Revenue", value=revenue)
-        col2.metric(label="Market Capitalization", value=market_cap)
-        col3.metric(label="P/E Ratio", value=pe_ratio)
+        metric_columns = st.columns(3)
+        metric_columns[0].metric('Revenue', revenue)
+        metric_columns[1].metric('Market capitalization', market_cap)
+        metric_columns[2].metric('P/E ratio', pe_ratio)
+    except Exception as error:
+        st.warning(f'Financial metrics are unavailable for {ticker}: {error}')
 
-# Update the dashboard based on user input
-if st.sidebar.button('Update Dashboard'):
-    data = fetch_stock_data(ticker, time_period, interval_mapping[time_period])
-    data = process_data(data)
-    data = add_technical_indicators(data)
-    
-    last_close, change, pct_change, high, low, volume = calculate_metrics(data)
-    
-    # Display stock metrics in one line
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(label=f"{ticker} Last Price", value=f"{last_close:.2f} USD", delta=f"{change:.2f} ({pct_change:.2f}%)")
-    col2.metric("High", f"{high:.2f} USD")
-    col3.metric("Low", f"{low:.2f} USD")
-    col4.metric("Volume", f"{volume:,}")
-    
-    # Generate the stock price chart
+
+@st.fragment(run_every='5m')
+def render_stock_dashboard(selected_ticker, period, interval, selected_chart_type, selected_indicators):
+    st.caption(f"Prices refresh every 5 minutes · Last updated {datetime.now().astimezone().strftime('%H:%M:%S %Z')}")
+    if not selected_ticker:
+        st.info('Search for a company or enter a ticker to view its stock chart.')
+        return
+
+    try:
+        data = fetch_stock_data(selected_ticker, period, interval)
+        if data.empty:
+            st.warning(f'No price history was returned for {selected_ticker}. Check the ticker or try another time period.')
+            return
+        data = process_data(data)
+        data = add_technical_indicators(data)
+        last_close, change, pct_change, high, low, volume = calculate_metrics(data)
+    except Exception as error:
+        st.error(f'Could not load price history for {selected_ticker}: {error}')
+        return
+
+    metric_columns = st.columns(4)
+    metric_columns[0].metric(
+        f'{selected_ticker} last price', f'{last_close:.2f} USD',
+        f'{change:.2f} ({pct_change:.2f}%)',
+    )
+    metric_columns[1].metric('Period high', f'{high:.2f} USD')
+    metric_columns[2].metric('Period low', f'{low:.2f} USD')
+    metric_columns[3].metric('Period volume', f'{volume:,.0f}')
+
     fig = go.Figure()
-    if chart_type == 'Candlestick':
-        fig.add_trace(go.Candlestick(x=data['Datetime'],
-                                     open=data['Open'],
-                                     high=data['High'],
-                                     low=data['Low'],
-                                     close=data['Close']))
+    if selected_chart_type == 'Candlestick':
+        fig.add_trace(go.Candlestick(
+            x=data['Datetime'],
+            open=data['Open'],
+            high=data['High'],
+            low=data['Low'],
+            close=data['Close'],
+            name=selected_ticker,
+        ))
     else:
-        fig = px.line(data, x='Datetime', y='Close', title=f"{ticker} Stock Prices")
-    
-    # Add selected technical indicators
-    for indicator in indicators:
-        if indicator == 'SMA 20':
-            fig.add_trace(go.Scatter(x=data['Datetime'], y=data['SMA_20'], name='SMA 20'))
-        elif indicator == 'EMA 20':
-            fig.add_trace(go.Scatter(x=data['Datetime'], y=data['EMA_20'], name='EMA 20'))
-    
-    # Finalize chart layout
-    fig.update_layout(title=f"{ticker} Stock Price Chart",
-                      xaxis_title='Time',
-                      yaxis_title='Price (USD)',
-                      height=600)
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Display historical data
-    st.subheader('Historical Stock Data')
-    st.dataframe(data[['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']])
-    
-    # Display technical indicators
-    st.subheader('Technical Indicators')
-    st.dataframe(data[['Datetime', 'SMA_20', 'EMA_20']])
+        fig.add_trace(go.Scatter(
+            x=data['Datetime'], y=data['Close'], name=selected_ticker,
+            mode='lines',
+        ))
 
-# Sidebar section for real-time stock prices
-st.sidebar.header('Track Popular Stocks')
-stock_symbols = ['AAPL', 'GOOGL', 'AMZN', 'MSFT']
-for symbol in stock_symbols:
-    real_time_data = fetch_stock_data(symbol, '1d', '1m')
-    if not real_time_data.empty:
-        real_time_data = process_data(real_time_data)
-        last_price = float(real_time_data['Close'].iloc[-1])
-        first_open = float(real_time_data['Open'].iloc[0])
-        change = last_price - first_open
-        pct_change = (change / first_open) * 100
-        st.sidebar.metric(f"{symbol}", f"{last_price:.2f} USD", f"{change:.2f} ({pct_change:.2f}%)")
+    indicator_columns = {'SMA 20': 'SMA_20', 'EMA 20': 'EMA_20'}
+    for indicator in selected_indicators:
+        column = indicator_columns[indicator]
+        fig.add_trace(go.Scatter(
+            x=data['Datetime'], y=data[column], name=indicator, mode='lines',
+        ))
 
-# Add footer information
-st.sidebar.subheader('About This Dashboard')
-st.sidebar.info('This dashboard was built to explore stock data and technical indicators interactively. Created as an original adaptation inspired by online resources.')
+    fig.update_layout(
+        title=f'{selected_ticker} · {period} price history',
+        xaxis_title='Time (US Eastern)',
+        yaxis_title='Price (USD)',
+        height=520,
+        template='plotly_white',
+        margin=dict(l=16, r=16, t=56, b=16),
+        xaxis_rangeslider_visible=False,
+    )
+    st.plotly_chart(fig, width='stretch')
+
+    history_tab, indicators_tab = st.tabs(['Price history', 'Technical indicators'])
+    with history_tab:
+        st.dataframe(
+            data[['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume']],
+            width='stretch',
+        )
+    with indicators_tab:
+        st.dataframe(data[['Datetime', 'SMA_20', 'EMA_20']], width='stretch')
+
+
+render_stock_dashboard(
+    ticker, time_period, interval_mapping[time_period], chart_type, indicators,
+)
+
+
+@st.fragment(run_every='5m')
+def render_market_watch():
+    st.subheader('Market watch')
+    st.caption(f"Updated {datetime.now().astimezone().strftime('%H:%M:%S %Z')} · Yahoo Finance quotes")
+    quote_columns = st.columns(4)
+    for column, symbol in zip(quote_columns, ['AAPL', 'GOOGL', 'AMZN', 'MSFT']):
+        try:
+            quote_data = fetch_stock_data(symbol, '1d', '1m')
+            if quote_data.empty:
+                column.metric(symbol, 'Unavailable')
+                continue
+            last_price = float(quote_data['Close'].iloc[-1])
+            first_open = float(quote_data['Open'].iloc[0])
+            change = last_price - first_open
+            pct_change = (change / first_open) * 100 if first_open else 0
+            column.metric(
+                symbol, f'{last_price:.2f} USD',
+                f'{change:+.2f} ({pct_change:+.2f}%)',
+            )
+        except Exception:
+            column.metric(symbol, 'Unavailable')
+
+
+render_market_watch()
+st.caption('Market data is provided by Yahoo Finance, may be delayed, and is for informational purposes only.')

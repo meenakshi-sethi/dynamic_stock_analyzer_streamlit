@@ -1,145 +1,50 @@
-# Dynamic Stock Performance Analyzer 📊
+# Dynamic Stock Performance Analyzer
 
-An interactive and user-friendly Streamlit application for analyzing stock performance. This tool fetches real-time stock data, visualizes key financial metrics, and provides customizable technical analysis with interactive charts. It is designed for stock enthusiasts, financial analysts, and anyone interested in tracking market trends dynamically.
+An interactive Streamlit dashboard for exploring stock prices, company fundamentals, and technical indicators. Search for a company by name, choose a matching ticker, and view its price chart and history alongside a small market watchlist.
 
----
+**Live app:** [Dynamic Stock Performance Analyzer](https://dynamicstockanalyzerapp-a5xybqbmegubcpd3jmsyj8.streamlit.app/)
 
-## Features 🔦
+**Source:** [GitHub repository](https://github.com/meenakshi-sethi/dynamic_stock_analyzer_streamlit)
 
-- **Real-Time Stock Data:** 🔄 Fetch and display historical and real-time stock prices using Yahoo Finance.
-- **Key Financial Metrics:** 💸 Gain insights into revenue, market capitalization, and P/E ratios.
-- **Technical Analysis:** 🔢 Add and visualize SMA (Simple Moving Average) and EMA (Exponential Moving Average) indicators.
-- **Customizable Charts:** 🎨 Choose between candlestick and line charts with adjustable time periods.
-- **User-Friendly Dashboard:** 🌐 Intuitive sidebar controls for selecting stock tickers, indicators, and chart types.
-- **Popular Stock Tracking:** 📊 Real-time updates for popular stocks like AAPL, GOOGL, AMZN, and MSFT.
-- **Historical Data Display:** ⏲️ Explore detailed historical stock data and technical indicators.
-- **Interactive Analysis:** 🔍 Provides tools to dynamically analyze trends and correlations in stock performance.
-- **Scalable Architecture:** 🚀 Easily extend the application to include more technical indicators and financial data sources.
+## Features
 
----
+- Search Yahoo Finance by company name or ticker and select from matching equities.
+- View candlestick or line charts for supported periods, with optional 20-period SMA and EMA overlays.
+- Review price, period high and low, volume, revenue, market capitalization, and P/E ratio.
+- Browse price history and technical indicators in separate tables.
+- Refresh the selected stock and market watchlist automatically every five minutes, or use **Refresh data now**.
+- Track AAPL, GOOGL, AMZN, and MSFT in the market watchlist.
 
-## Explore the App 🌟
+## Run Locally
 
-Check out the live version of the app here: [Dynamic Stock Performance Analyzer](https://dynamicstockanalyzerapp-a5xybqbmegubcpd3jmsyj8.streamlit.app/)
+Requirements: Python 3.10 or newer.
 
-Interact with the dashboard, analyze stock trends, and visualize key financial metrics in real-time.
-
----
-
-## Installation 🛠️
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/dynamic_stock_analyzer_streamlit.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd dynamic_stock_analyzer_streamlit
-   ```
-3. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate # On Windows: venv\Scripts\activate
-   ```
-4. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-## Usage 🔧
-
-1. Run the Streamlit app:
-   ```bash
-   streamlit run dynamic_stock_analyzer_with_streamlit.py
-   ```
-2. Open your browser and navigate to the provided URL (default: `http://localhost:8501`).
-3. Interact with the dashboard to analyze stock performance.
-
----
-
-## How It Works 🔄
-
-1. **Data Fetching:** Uses the `yfinance` library to retrieve historical and real-time stock data.
-2. **Financial Metrics:** Extracts key metrics like revenue, market cap, and P/E ratio for the selected ticker.
-3. **Technical Indicators:** Computes SMA and EMA using the `ta` library for trend analysis.
-4. **Dynamic Charts:** Employs Plotly for interactive candlestick and line chart visualizations.
-5. **Real-Time Updates:** Tracks popular stocks in real time with seamless updates.
-6. **Custom Analysis:** Allows users to combine multiple technical indicators and compare their impacts on stock trends.
-7. **Scalable Design:** Easily integrate additional data sources and extend analysis capabilities.
-
----
-
-## Requirements 🔧
-
-- Python 3.8+
-- Libraries:
-  - Streamlit
-  - Plotly
-  - pandas
-  - yfinance
-  - ta
-
----
-
-## Project Structure 🌍
-
-```
-.
-├── dynamic_stock_analyzer_with_streamlit.py  # Main application file
-├── requirements.txt                         # List of dependencies
-└── README.md                                # Project documentation
+```bash
+git clone https://github.com/meenakshi-sethi/dynamic_stock_analyzer_streamlit.git
+cd dynamic_stock_analyzer_streamlit
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+streamlit run dynamic_stock_analyzer_with_streamlit.py
 ```
 
----
+On Windows, activate the environment with `.venv\Scripts\activate` instead.
 
-## Contributing 📢
+## Use the Dashboard
 
-Contributions are welcome! If you have suggestions or improvements, please:
+1. Enter a company name, such as `Apple`, or a ticker, such as `AAPL`.
+2. Select **Find ticker** and choose the intended company when searching by name.
+3. Choose a time period, chart type, and optional technical indicators in the sidebar.
+4. View the chart and tables on the main page. Data refreshes every five minutes; **Refresh data now** forces a new fetch.
 
-1. Fork the repository.
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Add feature-name"
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature-name
-   ```
-5. Open a pull request.
+## Data Notes
 
----
+Prices and company information come from Yahoo Finance through `yfinance`. This is periodic polling, not a streaming feed. Availability, freshness, and intraday intervals depend on Yahoo Finance; quotes may be delayed or unavailable. This dashboard is for informational and educational use, not investment advice.
 
-## License 🔒
+## Technology
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Python, Streamlit, pandas, yfinance, Plotly, `ta`, and `tzdata`.
 
----
+## License
 
-## Acknowledgments 🌟
-
-- Built using [Streamlit](https://streamlit.io/).
-- Stock data provided by [Yahoo Finance](https://finance.yahoo.com/).
-- Charting powered by [Plotly](https://plotly.com/).
-
----
-
-## FAQs 🔐
-
-### 1. How do I add new technical indicators?
-To add new technical indicators, modify the `add_technical_indicators` function in the main application file to include calculations using the `ta` library or custom logic.
-
-### 2. Can I deploy this app online?
-Yes, you can deploy the app using platforms like Streamlit Cloud, AWS, or Heroku. Refer to their respective documentation for deployment steps.
-
-### 3. What stocks can I track?
-You can track any stock available on Yahoo Finance by entering its ticker symbol in the app.
-
----
-
-Happy Analyzing! 🌟
+MIT. See [LICENSE](LICENSE).
