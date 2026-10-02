@@ -22,6 +22,18 @@ def fetch_stock_data(ticker, period, interval):
         data.columns = data.columns.droplevel(1)
     return data
 
+# Search Yahoo Finance for matching company equities.
+def search_tickers(query):
+    quotes = yf.Search(query, max_results=10).quotes
+    return [
+        {
+            'symbol': quote['symbol'],
+            'name': quote.get('shortname') or quote['symbol'],
+        }
+        for quote in quotes
+        if quote.get('quoteType') == 'EQUITY' and quote.get('symbol')
+    ]
+
 # Function to fetch financial metrics
 def fetch_financial_metrics(ticker):
     # Using Yahoo Finance for real-time financial data
@@ -38,9 +50,9 @@ def fetch_financial_metrics(ticker):
 
 # Processing data for timezone and format compatibility
 def process_data(data):
-    if data.index.tzinfo is None:
+    if data.index.tz is None:
         data.index = data.index.tz_localize('UTC')
-    data.index = data.index.tz_convert('US/Eastern')
+    data.index = data.index.tz_convert('America/New_York')
     data.reset_index(inplace=True)
     data.rename(columns={'Date': 'Datetime'}, inplace=True)
     return data
@@ -71,7 +83,42 @@ st.title('Dynamic Stock Performance Analyzer')
 
 # Sidebar for user inputs
 st.sidebar.header('Customize Your View')
-ticker = st.sidebar.text_input('Enter Stock Ticker', 'ADBE', key='stock_ticker')
+company_query = st.sidebar.text_input('Company name or ticker', 'ADBE', key='company_query')
+if st.sidebar.button('Find ticker', key='find_ticker'):
+    query = company_query.strip()
+    st.session_state['ticker_search_query'] = query
+    st.session_state['ticker_search_error'] = None
+    st.session_state['ticker_search_results'] = []
+    if query:
+        try:
+            st.session_state['ticker_search_results'] = search_tickers(query)
+        except Exception as error:
+            st.session_state['ticker_search_error'] = str(error)
+
+query = company_query.strip()
+if st.session_state.get('ticker_search_query') == query:
+    ticker_matches = st.session_state.get('ticker_search_results', [])
+    search_error = st.session_state.get('ticker_search_error')
+else:
+    ticker_matches = []
+    search_error = None
+
+if ticker_matches:
+    ticker_options = {
+        f"{match['name']} ({match['symbol']})": match['symbol']
+        for match in ticker_matches
+    }
+    selected_company = st.sidebar.selectbox('Matching companies', list(ticker_options))
+    ticker = ticker_options[selected_company]
+elif st.session_state.get('ticker_search_query') == query:
+    ticker = ''
+    if search_error:
+        st.sidebar.error(f'Ticker search failed: {search_error}')
+    elif query:
+        st.sidebar.warning('No matching companies found. Enter a ticker or try another name.')
+else:
+    ticker = query.upper()
+
 time_period = st.sidebar.selectbox('Select Time Period', ['1d', '1wk', '1mo', '1y', 'max'])
 chart_type = st.sidebar.selectbox('Select Chart Type', ['Candlestick', 'Line'])
 indicators = st.sidebar.multiselect('Select Technical Indicators', ['SMA 20', 'EMA 20'])
